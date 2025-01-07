@@ -1,0 +1,11 @@
+/target
+cumulus.wasm
+dist/cumulus.js
+dist/cumulus_bg.wasm
+
+
+# Added by cargo
+#
+# already existing elements were commented out
+
+#/target
