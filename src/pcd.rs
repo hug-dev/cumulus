@@ -119,5 +119,5 @@ pub fn init_pcd(pcd: &[u8]) -> Result<PointCloud> {
         })
         .collect();
 
-    PointCloud::new(points?, field_names)
+    PointCloud::new(points?, field_names, width as usize, height as usize)
 }

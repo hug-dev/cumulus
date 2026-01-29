@@ -115,6 +115,7 @@ fn main_window(
                 cols[0].label("up/down arrows");
                 cols[0].label("N");
                 cols[0].label("M");
+                cols[0].label("TAB");
 
                 cols[1].label("release mouse grab");
                 cols[1].label("look around");
@@ -130,6 +131,7 @@ fn main_window(
                 cols[1].label("change the points color");
                 cols[1].label("decrease the points size");
                 cols[1].label("increase the points size");
+                cols[1].label("show image view");
             });
 
             ui.add_space(12.0);

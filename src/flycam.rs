@@ -166,8 +166,10 @@ fn setup(
 fn cursor_grab(
     keys: Res<ButtonInput<KeyCode>>,
     mut primary_cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
-) {
-    if keys.just_pressed(TOGGLE_GRAB_CURSOR) {
+    image_camera: Query<&Camera, Without<FlyCam>>,
+) -> Result {
+    let image_camera = image_camera.single()?;
+    if !image_camera.is_active && keys.just_pressed(TOGGLE_GRAB_CURSOR) {
         match primary_cursor_options.grab_mode {
             CursorGrabMode::None => {
                 primary_cursor_options.grab_mode = CursorGrabMode::Confined;
@@ -179,6 +181,8 @@ fn cursor_grab(
             }
         }
     }
+
+    Ok(())
 }
 
 // change the camera speed

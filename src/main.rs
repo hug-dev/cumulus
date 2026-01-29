@@ -3,13 +3,13 @@ use bevy::color::Color;
 use bevy::prelude::*;
 use clap::Parser;
 use flycam::FlyCamPlugin;
-use std::path::Path;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 
 mod csv;
 mod flycam;
+mod imagecam;
 mod pcd;
 mod ply;
 mod pointcloud;
@@ -84,8 +84,9 @@ fn main() -> anyhow::Result<()> {
                 primary_window: Some(window),
                 ..default()
             }),
-            FlyCamPlugin,
             ui::UiPlugin,
+            // The last camera is where the UI will get displayed.
+            (ImageCamPlugin, FlyCamPlugin),
             PointCloudLoaderPlugin,
         ))
         .insert_resource(ClearColor(BACKGROUND_COLOR))

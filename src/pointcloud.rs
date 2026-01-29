@@ -3,6 +3,7 @@ use anyhow::{Result, anyhow, bail};
 use bevy::color::Color;
 use bevy::log::info;
 use bevy::prelude::*;
+use bevy::render::render_resource::TextureFormat;
 use bevy_pointcloud::PointCloudPlugin;
 use bevy_pointcloud::point_cloud::PointCloud as BevyPointCloud;
 use bevy_pointcloud::point_cloud::PointCloud3d;
@@ -23,12 +24,25 @@ const HIGHLIGHT_POINT_MAX_DIST: f32 = 0.2;
 
 #[derive(Debug)]
 pub struct PointCloud {
+    // Stored row-first in an organized point cloud.
+    // Row 0 is the bottom one and column 0 is the left-most one.
     points: Vec<Point>,
     field_names: Vec<String>,
+    // Number of columns in an organized point cloud, otherwise number of points.
+    width: usize,
+    // Number of rows in an organized point cloud, otherwise 1.
+    height: usize,
 }
 
 impl PointCloud {
-    pub fn new(points: Vec<Point>, field_names: Vec<String>) -> Result<Self> {
+    pub fn new(
+        points: Vec<Point>,
+        field_names: Vec<String>,
+        width: usize,
+        height: usize,
+    ) -> Result<Self> {
+        let len = points.len();
+
         if field_names[0] != "x" {
             bail!("fields[0] should be x");
         }
@@ -39,10 +53,25 @@ impl PointCloud {
             bail!("fields[2] should be z");
         }
 
+        // Various checks with width and height.
+        if width * height != len {
+            bail!("width and height do not match number of points ({width}*{height} != {len})");
+        }
+
+        if height == 0 {
+            bail!("height can not be 0");
+        }
+
         Ok(Self {
             points,
             field_names,
+            width,
+            height,
         })
+    }
+
+    pub fn field_color_at(&self, row: usize, column: usize, index: usize) -> Color {
+        self.points[row * self.width + column].get_field_color(index)
     }
 
     pub fn fields_number(&self) -> usize {
@@ -51,6 +80,10 @@ impl PointCloud {
 
     pub fn get_field_name(&self, index: usize) -> &str {
         &self.field_names[index]
+    }
+
+    pub fn is_organized(&self) -> bool {
+        self.height != 1
     }
 
     pub fn to_bevy_pointcloud(&self) -> BevyPointCloud {
@@ -256,6 +289,8 @@ fn load_pointcloud(
     query: Query<Entity, With<PointCloud3d>>,
     highlight: Single<&mut Visibility, With<Highlight>>,
     mut camera: Single<&mut Transform, With<FlyCam>>,
+    window: Single<&Window>,
+    mut images: ResMut<Assets<Image>>,
 ) -> bevy::prelude::Result {
     if current_point_cloud.is_new.load(Ordering::Relaxed) {
         info!("loading new pointcloud...");
@@ -285,6 +320,40 @@ fn load_pointcloud(
             PointCloudMaterial3d(material.clone()),
         ));
 
+        if point_cloud.is_organized() {
+            // Also load the 2d image on the 2D camera
+            // Use the last field as color.
+            let field_color_index = point_cloud.field_names.len() - 1;
+            let window_width = window.width();
+            let window_height = window.height();
+
+            let mut new_image = Image::new_target_texture(
+                point_cloud.width as u32,
+                point_cloud.height as u32,
+                TextureFormat::Rgba32Float,
+            );
+
+            for row in 0..point_cloud.height {
+                for column in 0..point_cloud.width {
+                    new_image.set_color_at(
+                        column as u32,
+                        row as u32,
+                        point_cloud.field_color_at(
+                            point_cloud.height - 1 - row,
+                            column,
+                            field_color_index,
+                        ),
+                    )?;
+                }
+            }
+
+            commands.spawn((Sprite {
+                image: images.add(new_image),
+                custom_size: Some(Vec2::new(window_width, window_height)),
+                ..default()
+            },));
+        }
+
         current_point_cloud.is_new.store(false, Ordering::Relaxed);
         *highlight = Visibility::Hidden;
         camera.translation = Default::default();
@@ -301,6 +370,9 @@ fn update_color(
     current_point_cloud: Res<CurrentPointCloud>,
     point_cloud_handle: Single<&mut PointCloud3d>,
     mut point_clouds: ResMut<Assets<BevyPointCloud>>,
+    // We assume that there is only one sprite: the lidar image.
+    sprite: Single<&Sprite>,
+    mut images: ResMut<Assets<Image>>,
     key_input: Res<ButtonInput<KeyCode>>,
 ) -> bevy::prelude::Result {
     if key_input.just_pressed(KeyCode::ArrowUp) || key_input.just_pressed(KeyCode::ArrowDown) {
@@ -329,6 +401,21 @@ fn update_color(
                 new_color.blue,
                 new_color.alpha,
             ];
+        }
+
+        let image = images.get_mut(&sprite.image).unwrap();
+        for row in 0..point_cloud.height {
+            for column in 0..point_cloud.width {
+                image.set_color_at(
+                    column as u32,
+                    row as u32,
+                    point_cloud.field_color_at(
+                        point_cloud.height - 1 - row,
+                        column,
+                        new_color_field,
+                    ),
+                )?;
+            }
         }
 
         current_point_cloud

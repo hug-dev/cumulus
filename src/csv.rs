@@ -60,5 +60,8 @@ pub fn init_csv(buf: &[u8]) -> Result<PointCloud> {
         })
         .collect();
 
-    PointCloud::new(points?, field_names)
+    let points = points?;
+    let width = points.len();
+
+    PointCloud::new(points, field_names, width, 1)
 }

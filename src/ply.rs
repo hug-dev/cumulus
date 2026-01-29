@@ -65,7 +65,10 @@ pub fn init_ply(buf: &[u8]) -> Result<PointCloud> {
         })
         .collect();
 
-    PointCloud::new(points?, field_names)
+    let points = points?;
+    let width = points.len();
+
+    PointCloud::new(points, field_names, width, 1)
 }
 
 fn property_to_f32(prop: &Property) -> f32 {
