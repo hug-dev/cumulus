@@ -1,5 +1,7 @@
 # cumulus ☁️
 
+https://hug-dev.github.io/cumulus/
+
 An online First-Person View point cloud vizualizer!
 The points are colored with the different fields of the point cloud file.
 

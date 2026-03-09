@@ -136,7 +136,7 @@ fn main_window(
             ui.add(
                 egui::Hyperlink::from_label_and_url(
                     "Bugs or feature request?",
-                    "https://github.com/",
+                    "https://github.com/hug-dev/cumulus/issues/new",
                 )
                 .open_in_new_tab(true),
             );
